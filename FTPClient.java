@@ -46,7 +46,7 @@ public class FTPClient {
             this.file_name = file_name; 
             doHandshake();
             this.udpSock = new DatagramSocket();
-            this.udpSock.setSoTimeout(timeout*10);
+            this.udpSock.setSoTimeout(timeout);
         } catch (Exception e) {
             e.printStackTrace();
         }
