@@ -20,6 +20,7 @@ import java.io.FileInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
+import java.util.Arrays;
 public class FTPClient {
 
     private String file_name;
@@ -63,14 +64,14 @@ public class FTPClient {
         InetAddress hostAddress = InetAddress.getByName("localhost");
         fis = new FileInputStream(new File(file_name)); 
         Segment s = new Segment();
-        this.outgoing = new byte[512];
+        this.outgoing = new byte[s.MAX_PAYLOAD_SIZE];
         int count = 0;
         int a;
         int seq = 1;
         while((a = fis.read(outgoing,0,outgoing.length)) != -1) {
             seq = (seq == 1) ? 0 : 1;
-            s.setPayload(outgoing);
-            s.setSeqNum(seq);
+            if (a == outgoing.length) s = new Segment(seq, outgoing);
+            else s = new Segment(seq, Arrays.copyOf(outgoing, a));
             DatagramPacket dp = new DatagramPacket(s.getBytes(), s.getLength(), hostAddress, this.server_port);
             this.udpSock.send(dp); 
             waitForACK(dp,count++,seq);
