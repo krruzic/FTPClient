@@ -50,6 +50,10 @@ public class FTPClient {
             this.udpSock.setSoTimeout(timeout);
         } catch (Exception e) {
             e.printStackTrace();
+            System.exit(-1);
+        } catch (FTPServerException e) {
+            System.out.println(e.getMessage());
+            System.exit(-1);
         }
         this.server_port = server_port;
     }
