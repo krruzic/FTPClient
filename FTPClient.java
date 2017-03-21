@@ -5,7 +5,7 @@
  * @author      Kristopher Ruzic
  * @version     1.5, 16 Feb 2017
  *
- 
+
 */
 
 import java.net.Socket;
@@ -78,7 +78,7 @@ public class FTPClient {
         }
         fis.close();
         this.tcpOut.writeByte(0);
-       
+
         // clean up
         this.tcpSock.close();
         this.udpSock.close();
@@ -106,23 +106,22 @@ public class FTPClient {
     // writes one byte on the tcp socket and checks if it got a response
     public void doHandshake() throws FTPServerException, java.io.IOException {
         this.tcpOut = new DataOutputStream(this.tcpSock.getOutputStream());
-        this.tcpOut.writeUTF(this.file_name);
-        this.tcpOut.flush();
+        this.tcpOut.writeUTF(this.file_name); this.tcpOut.flush();
         this.tcpIn = new DataInputStream(this.tcpSock.getInputStream());
         byte resp = this.tcpIn.readByte();
-        
+
         if (resp == 0) System.out.println("Handshake done!");
         else throw new FTPServerException("Could not complete handshake with server");
     }
 
     public static void main(String[] args) {
-        
+
         String server = "localhost";
         String file_name = "";
         int server_port = 8888;
         int timeout = 50; // milli-seconds (this value should not be changed)
 
-        
+
         // check for command line arguments
         if (args.length == 3) {
             // either provide 3 parameters
@@ -136,9 +135,9 @@ public class FTPClient {
             System.exit(0);
         }
 
-        
+
         FTPClient ftp = new FTPClient(server, server_port, file_name, timeout);
-        
+
         System.out.printf("sending file \'%s\' to server...\n", file_name);
         try {
             ftp.send();
@@ -146,7 +145,7 @@ public class FTPClient {
             e.printStackTrace();
             System.exit(-1);
         }
-        
+
         System.out.println("file transfer completed.");
     }
 
