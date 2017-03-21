@@ -1,16 +1,12 @@
-
-
-
 /**
  * FastClient Class
  * 
  * FastClient implements a basic reliable FTP client application based on UDP data transmission and selective repeat protocol
  * @author Kristopher Ruzic
- * @version 0.1, 19 Mar 2017
+ * @version 0.9, 19 Mar 2017
  */
 
 import java.net.Socket;
-import java.net.DatagramPacket;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketTimeoutException;
@@ -25,13 +21,12 @@ import java.util.Arrays;
 
 
 public class FastClient {
-
-
-    private InetAddress hostAddr;
     private int serverPort;
     private int timeout;
 
+    private String serverName;
     private Socket tcpSock;
+    private DatagramSocket udpSock;
     private DataInputStream tcpIn;
     private DataOutputStream tcpOut;
     private byte[] outgoing;
@@ -51,62 +46,86 @@ public class FastClient {
         try {
             this.tcpSock = new Socket(server_name, server_port);
             this.tcpSock.setReuseAddress(true);
+            this.udpSock = new DatagramSocket();
         } catch (Exception e) {
+            System.out.println("Could not create FastClient, exiting");
+            System.exit(-1);
         }
-        this.hostAddr = InetAddress.getByName(server_name);
+        this.serverName = server_name; 
         this.serverPort = server_port;
         this.timeout = timeout;
-        this.queue = new TxQueue(window);
 
+        this.queue = new TxQueue(window);
     }
 
     /** 
      * send file 
      * @param file_name      file to be transfered
      */
-    public void send(String file_name) throws Exception {
-        doHandshake(file_name);
+    public void send(String file_name) { 
+        try {
+            doHandshake(file_name);
+        } catch (Exception e) {
+            System.out.println("Connection to Server could not be established");
+            System.exit(-1);
+        }
         // thread to handle acks (removing segments from queue)
-        new Thread(new ACKHandler(this.queue)).start();
-
-        fis = new FileInputStream(new File(file_name));
+        Thread qt = new Thread(new QueueHandler(this.queue, udpSock));
+        qt.start();
+        try {
+            fis = new FileInputStream(new File(file_name));
+        } catch (Exception e) {
+            System.out.println("File could not be read or does not exist");
+            System.exit(-1);
+        }
         Segment s = new Segment();
         outgoing = new byte[s.MAX_PAYLOAD_SIZE];
-        if ((a = fis.read(outgoing,0,outgoing.length)) == -1)
-            break; // file is blank
-
         int seq = 0;
-        while (true) {
-            if (a == outgoing.length) s = new Segment(seq, outgoing);
-            else s = new Segment(seq, Arrays.copyOf(outgoing, a));
-            queue.add(s);
-            new Thread(new SeqmentHandler(s));
-            if ((a = fis.read(outgoing,0,outgoing.length)) == -1)
-                break; // whole file read
-            seq++;
-        }
-//        while ((a = fis.read(outgoing,0,outgoing.length)) != -1) {
-//            if (a == outgoing.length) s = new Segment(count, outgoing);
-//            else s = new Segment(count, Arrays.copyOf(outgoing, a));
-//            while (!queue.isFull()) {
-//                // read in bytes, create segment and add to queue
-//                DatagramPacket dp = new DatagramPacket(s.getBytes(), s.getLength(), hostAddr, this.server_port);
-//                
-//            }
-//        }
-        fis.close();
-        tcpOut.writeByte(0);
+        int a = 0;
+        System.out.println("Reading in file and creating packets");
+        while (a != -1) {
+            try {
+                a = fis.read(outgoing,0,outgoing.length);
+            } catch (Exception e) {
+                System.out.println("File could not be read!");
+                System.exit(-1);
+            }
+            if (a != -1) {
+                try {
+                    if (a == outgoing.length) s = new Segment(seq, outgoing);
+                    else s = new Segment(seq, Arrays.copyOf(outgoing, a));
 
-        // clean up
-        tcpSock.close();
-        udpSock.close();
+                    while(queue.isFull()) {} // wait until we can add
+                    queue.add(s);
+                    new Thread(new SegmentHandler(s, queue, serverName, udpSock, timeout, serverPort)).start();
+                    seq++;
+                } catch (Exception e) {
+                    System.out.println("Problem creating packets...");
+                    e.printStackTrace();
+                    System.exit(-1);
+                }
+            }
+        }
+        while(!queue.isEmpty()) {} // wait for all segments to be ACKed
+        qt.interrupt();
+        try {
+            fis.close();
+            tcpOut.writeByte(0); // tell server we're done
+
+            // clean up
+            tcpSock.close();
+            udpSock.close();
+        } catch (Exception e) {
+            System.out.println("Problem cleaning up after sending file. Exiting anyway");
+            System.exit(0);
+        }
     }
 
     /** 
      * Do handshake with the server
      * @param file_name file to do handshake for 
      */
-    public void doHandshake(string file_name) throws FTPServerException, java.io.IOException {
+    public void doHandshake(String file_name) throws FTPServerException, java.io.IOException {
         tcpOut = new DataOutputStream(tcpSock.getOutputStream());
         tcpOut.writeUTF(file_name);
         tcpOut.flush();
