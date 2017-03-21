@@ -5,8 +5,7 @@
  * @author      Kristopher Ruzic
  * @version     1.5, 16 Feb 2017
  *
-
-*/
+ */
 
 import java.net.Socket;
 import java.net.DatagramPacket;
@@ -22,7 +21,6 @@ import java.io.DataOutputStream;
 
 import java.util.Arrays;
 public class FTPClient {
-
     private String file_name;
     private Socket tcpSock; 
     private DatagramSocket udpSock;
@@ -36,7 +34,8 @@ public class FTPClient {
      * 
      * @param serverName    server name
      * @param server_port   server port
-     * @param file_name     name of file to transfer * @param timeout       Time out value (in milli-seconds).
+     * @param file_name     name of file to transfer 
+     * @param timeout       Time out value (in milli-seconds).
      */
 
     // sets up all the attributes and calls the handshake routine
@@ -148,5 +147,4 @@ public class FTPClient {
 
         System.out.println("file transfer completed.");
     }
-
 }
