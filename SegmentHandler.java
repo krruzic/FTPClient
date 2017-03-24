@@ -46,6 +46,7 @@ public class SegmentHandler implements Runnable {
                 }
                 return;
             }
+            System.out.format("ACK Receieved, removing segment #%d\n", segment.getSeqNum());
             resendTimer.cancel();
         } 
     }

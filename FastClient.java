@@ -95,7 +95,6 @@ public class FastClient {
                     if (a == outgoing.length) s = new Segment(seq, outgoing);
                     else s = new Segment(seq, Arrays.copyOf(outgoing, a));
 
-                    while(queue.isFull()) {} // wait until we can add
                     queue.add(s);
                     new Thread(new SegmentHandler(s, queue, serverName, udpSock, timeout, serverPort)).start();
                     seq++;

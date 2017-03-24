@@ -1,6 +1,7 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
+import java.util.Arrays;
 public class QueueHandler implements Runnable {
     protected TxQueue queue = null;
     protected DatagramSocket udpSock = null;
@@ -11,16 +12,20 @@ public class QueueHandler implements Runnable {
     }
 
     public void run() {
-        byte[] incoming = new byte[1];
-        while (!Thread.currentThread().isInterrupted()) {
+        while (!udpSock.isClosed()) {
+            byte[] incoming = new byte[4];
+            int ack = -1;
             try {
                 DatagramPacket resp = new DatagramPacket(incoming, incoming.length);
                 udpSock.receive(resp);
-                System.out.format("ACK received for Seq #%d\n", incoming[0]);
-                if (queue.getNode(incoming[0]) != null)
-                    queue.getNode(incoming[0]).setStatus(1);
+                
+                // convert byte array read in to an int
+                ack = java.nio.ByteBuffer.wrap(Arrays.copyOf(resp.getData(), incoming.length)).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt();
+                System.out.format("ACK received for Seq #%d\n", ack);
+                TxQueueNode cur = queue.getNode(ack);
+                if (cur != null)
+                    cur.setStatus(1);
                 while (!queue.isEmpty() && queue.getHeadNode().getStatus() == 1) {
-                    System.out.format("Removing segment at head: %d\n", queue.getHeadSegment().getSeqNum());
                     queue.remove();
                 }
             } catch (java.net.SocketException e) {
